@@ -37,7 +37,19 @@ yarn-error.log*
 
 # python environments and model artifacts
 /venv/
+/.venv/
+**/.venv/
 **/model_best.pth/
+*.pth
+*.pth.tar
+*.pt
+*.ckpt
+*.onnx
+*.safetensors
+*.h5
+*.weights
+*.tflite
+model_best.pth.gz
 
 # vercel
 .vercel
