@@ -1,6 +1,9 @@
 "use client";
 
+import Image from "next/image";
+import Link from "next/link";
 import React, { ChangeEvent, DragEvent, useMemo, useRef, useState } from "react";
+import "./truthlens.css";
 
 type ApiSignal = {
     label: string;
@@ -170,6 +173,7 @@ export default function TruthLens() {
     };
 
     const renderResult = (data: ApiResult) => {
+        const bandClass = data.ai_probability >= 50 ? "bar-fill ai" : "bar-fill human";
         return (
             <article className="result" aria-live="polite">
                 <div className="result-top">
@@ -183,7 +187,7 @@ export default function TruthLens() {
                         <p className="prob-value">{data.ai_probability}%</p>
                     </div>
                     <div className="bar">
-                        <div className="bar-fill" style={{ width: `${data.ai_probability}%` }}></div>
+                        <div className={bandClass} style={{ width: `${data.ai_probability}%` }}></div>
                     </div>
                 </div>
 
@@ -207,75 +211,14 @@ export default function TruthLens() {
 
     return (
         <>
-            <style
-                dangerouslySetInnerHTML={{
-                    __html: `
-:root { --bg: #0b1020; --surface: #141a2e; --surface-muted: #11172a; --border: #2b3558; --primary: #4a7cff; --text: #e7ecff; --text-secondary: #a5b1d4; --danger: #ff7b69; --danger-bg: #30181a; --danger-text: #ffb4a7; --success-bg: #102a1f; --success-text: #7ce3ab; --soft-shadow: 0 8px 24px rgba(0, 0, 0, 0.35); --radius: 12px; }
-* { box-sizing: border-box; }
-.app { max-width: 980px; margin: 0 auto; padding: 36px 20px 56px; color: var(--text); }
-body { background: radial-gradient(circle at top, #111938 0%, var(--bg) 45%); color: var(--text); }
-.top-nav { display: flex; justify-content: flex-end; margin-bottom: 14px; }
-.top-nav a { color: var(--text-secondary); text-decoration: none; font-size: 0.9rem; border: 1px solid var(--border); background: var(--surface); padding: 7px 12px; border-radius: 999px; }
-.title { margin: 0; font-family: "Instrument Serif", serif; font-size: clamp(2.2rem, 5vw, 3.15rem); font-weight: 400; }
-.subtitle { margin: 8px 0 0; font-size: 0.95rem; color: var(--text-secondary); max-width: 540px; line-height: 1.5; }
-.tabs { display: flex; gap: 28px; border-bottom: 1px solid var(--border); margin-top: 28px; }
-.tab { border: 0; border-bottom: 2px solid transparent; background: transparent; color: var(--text-secondary); padding: 0 0 12px; font-size: 1rem; font-weight: 500; cursor: pointer; }
-.tab.active { color: var(--primary); border-bottom-color: var(--primary); }
-.panel-shell { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--soft-shadow); margin-top: 16px; }
-.panel { padding: 32px; }
-.panel h2 { margin: 0 0 24px; font-family: "Instrument Serif", serif; font-weight: 400; font-size: clamp(1.7rem, 3vw, 2rem); }
-.input-label { display: inline-block; margin-bottom: 10px; color: var(--text-secondary); }
-textarea { width: 100%; min-height: 220px; border-radius: 10px; border: 1px solid var(--border); background: var(--surface-muted); color: var(--text); font-size: 1rem; line-height: 1.6; padding: 16px; resize: vertical; }
-.meta-row { margin-top: 12px; margin-bottom: 24px; display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
-.char-count, .hint { margin: 0; font-size: 0.9rem; color: var(--text-secondary); }
-.btn { border: 1px solid transparent; border-radius: 8px; background: var(--primary); color: #f5f8ff; font-size: 0.98rem; font-weight: 600; padding: 12px 18px; cursor: pointer; }
-.btn:disabled { opacity: 0.45; cursor: not-allowed; }
-.btn.big { width: 100%; padding: 14px; }
-.drop-zone { border: 1px dashed #3a4468; background: var(--surface-muted); border-radius: 10px; min-height: 190px; display: grid; place-items: center; text-align: center; padding: 20px; cursor: pointer; }
-.drop-zone.dragover { border-color: var(--primary); background: #1a2340; }
-.dz-sub { color: var(--text-secondary); line-height: 1.5; }
-.browse { color: var(--primary); text-decoration: underline; cursor: pointer; }
-.preview { margin-top: 16px; padding: 14px; border: 1px solid var(--border); border-radius: 10px; background: #121a31; display: flex; gap: 14px; align-items: center; flex-wrap: wrap; }
-.thumb { width: 84px; height: 84px; border-radius: 8px; border: 1px solid var(--border); object-fit: cover; background: #1a2340; display: grid; place-items: center; color: var(--text-secondary); font-size: 0.8rem; }
-.file-name { margin: 0; font-weight: 600; word-break: break-word; }
-.badges { margin-top: 8px; display: flex; gap: 8px; flex-wrap: wrap; }
-.badge { display: inline-flex; align-items: center; border-radius: 999px; border: 1px solid #3a4468; background: #1a2340; color: #d4ddf9; font-size: 0.8rem; padding: 4px 10px; }
-.loader { margin-top: 16px; border: 1px solid var(--border); border-radius: 10px; background: #121a31; padding: 12px 14px; display: flex; align-items: center; gap: 10px; }
-.spinner { width: 18px; height: 18px; border-radius: 50%; border: 2px solid #3a4468; border-top-color: var(--primary); animation: spin 0.8s linear infinite; }
-.result { margin-top: 20px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); box-shadow: var(--soft-shadow); padding: 18px; }
-.result-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 14px; }
-.result-title { margin: 0; color: var(--text-secondary); }
-.badge.verdict-ai { background: var(--danger-bg); color: var(--danger-text); border-color: #f2d2ca; }
-.badge.verdict-human { background: var(--success-bg); color: var(--success-text); border-color: #d5eadf; }
-.prob-wrap { margin-bottom: 14px; }
-.prob-header { margin-bottom: 8px; display: flex; justify-content: space-between; }
-.prob-label { margin: 0; color: var(--text-secondary); }
-.prob-value { margin: 0; font-size: 1.2rem; font-weight: 700; }
-.bar { width: 100%; height: 10px; border-radius: 999px; background: #202949; overflow: hidden; }
-.bar-fill { height: 100%; background: var(--danger); transition: width 700ms ease; }
-.breakdown { border-top: 1px solid #2b3558; border-bottom: 1px solid #2b3558; }
-.score-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 0; border-bottom: 1px solid #2b3558; }
-.score-row:last-child { border-bottom: 0; }
-.score-label { color: #b8c4e6; }
-.score-value { font-weight: 600; color: #e7ecff; }
-.result-foot { margin-top: 14px; display: flex; justify-content: space-between; }
-.confidence { border-radius: 999px; border: 1px solid #3a4468; background: #1a2340; color: #c9d4f7; font-size: 0.82rem; padding: 5px 10px; }
-.disclaimer { margin: 12px 0 0; font-size: 0.85rem; color: #96a4ca; font-style: italic; }
-.error-msg { margin-top: 12px; color: #ff9a89; }
-@keyframes spin { to { transform: rotate(360deg); } }
-@media (max-width: 760px) { .app { padding: 24px 14px 34px; } .panel { padding: 24px 16px; } }
-          `,
-                }}
-            />
-
             <main className="app">
                 <div className="top-nav">
-                    <a href="/">← Back to landing page</a>
+                    <Link href="/">← Back to landing page</Link>
                 </div>
 
                 <header className="hero">
-                    <h1 className="title">Authentiq</h1>
-                    <p className="subtitle">Unmask the Machine. Assess text and file authenticity with a clean forensic report workflow.</p>
+                    <h1 className="title">TruthLens by Authentiq</h1>
+                    <p className="subtitle">Professional authenticity checks for editorial teams, classrooms, and trust workflows. Run text or file analysis and get an explainable verdict.</p>
                     <nav className="tabs" aria-label="Detector tabs">
                         <button className={`tab ${activeTab === "text" ? "active" : ""}`} onClick={() => setActiveTab("text")} type="button">Text Detector</button>
                         <button className={`tab ${activeTab === "file" ? "active" : ""}`} onClick={() => setActiveTab("file")} type="button">File Detector</button>
@@ -291,7 +234,7 @@ textarea { width: 100%; min-height: 220px; border-radius: 10px; border: 1px soli
 
                             <div className="meta-row">
                                 <p className="char-count">{textInput.length} characters</p>
-                                <p className="hint">Use at least a few sentences for a stronger signal.</p>
+                                <p className="hint">For best accuracy, provide 80+ words.</p>
                             </div>
 
                             <button className="btn big" type="button" onClick={analyzeText} disabled={textLoading}>{textLoading ? "Analyzing..." : "Analyze Text"}</button>
@@ -299,7 +242,7 @@ textarea { width: 100%; min-height: 220px; border-radius: 10px; border: 1px soli
                             {textLoading ? (
                                 <div className="loader" aria-live="polite">
                                     <div className="spinner" aria-hidden="true"></div>
-                                    <p>Analyzing writing patterns and semantic structure...</p>
+                                    <p>Analyzing style consistency, lexical structure, and chunk-level signals...</p>
                                 </div>
                             ) : null}
 
@@ -338,7 +281,18 @@ textarea { width: 100%; min-height: 220px; border-radius: 10px; border: 1px soli
 
                             {selectedFile ? (
                                 <div className="preview">
-                                    {filePreviewUrl ? <img className="thumb" src={filePreviewUrl} alt="Selected file preview" /> : <div className="thumb">{fileKind}</div>}
+                                    {filePreviewUrl ? (
+                                        <Image
+                                            className="thumb"
+                                            src={filePreviewUrl}
+                                            alt="Selected file preview"
+                                            width={84}
+                                            height={84}
+                                            unoptimized
+                                        />
+                                    ) : (
+                                        <div className="thumb">{fileKind}</div>
+                                    )}
                                     <div className="file-meta">
                                         <p className="file-name">{selectedFile.name}</p>
                                         <div className="badges">
@@ -351,7 +305,7 @@ textarea { width: 100%; min-height: 220px; border-radius: 10px; border: 1px soli
                             ) : null}
 
                             <div className="meta-row">
-                                <p className="hint">We inspect visual artifacts for images and language signals for text/doc files.</p>
+                                <p className="hint">Images use a vision classifier. Documents use calibrated text analysis.</p>
                             </div>
 
                             <button className="btn big" type="button" disabled={!selectedFile || fileLoading} onClick={analyzeFile}>{fileLoading ? "Scanning..." : "Scan File"}</button>

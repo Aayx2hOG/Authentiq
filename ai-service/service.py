@@ -3,23 +3,22 @@
 from __future__ import annotations
 
 import os
-import re
 import tempfile
 from pathlib import Path
 from typing import Any
 
-import joblib
 from fastapi import FastAPI, File, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from PIL import Image, ImageStat
 from pypdf import PdfReader
 from docx import Document
 from pydantic import BaseModel, Field
+from text_detection.detect import TextDetector
 
 
 BASE_DIR = Path(__file__).resolve().parent
-MODEL_PATH = BASE_DIR / "model.pkl"
-VECTORIZER_PATH = BASE_DIR / "vectorizer.pkl"
+TEXT_MODEL_PATH = BASE_DIR / "text_detection" / "logistic_model.pkl"
+TEXT_VECTORIZER_PATH = BASE_DIR / "text_detection" / "vectorizer.pkl"
 IMAGE_MODEL_PATH = BASE_DIR / "image_detection" / "model_best.pth"
 TEXT_FILE_EXTENSIONS = {".txt", ".md", ".csv", ".json", ".log", ".xml", ".html", ".pdf", ".docx"}
 
@@ -65,97 +64,74 @@ app.add_middleware(
 )
 
 
-def _confidence(probability: int) -> str:
-	if probability >= 78 or probability <= 22:
+def _confidence(probability: int, confidence_score: int | None = None) -> str:
+	if confidence_score is not None:
+		if confidence_score >= 72:
+			return "High"
+		if confidence_score >= 48:
+			return "Medium"
+		return "Low"
+
+	distance = abs(probability - 50)
+	if distance >= 26:
 		return "High"
-	if probability >= 45 and probability <= 77:
+	if distance >= 14:
 		return "Medium"
 	return "Low"
 
 
-def _load_text_model() -> tuple[Any | None, Any | None]:
-	if not MODEL_PATH.exists() or not VECTORIZER_PATH.exists():
-		return None, None
-	try:
-		model = joblib.load(MODEL_PATH)
-		vectorizer = joblib.load(VECTORIZER_PATH)
-		return model, vectorizer
-	except Exception:
-		return None, None
+TEXT_DETECTOR = TextDetector(model_path=TEXT_MODEL_PATH, vectorizer_path=TEXT_VECTORIZER_PATH)
 
 
-TEXT_MODEL, TEXT_VECTORIZER = _load_text_model()
-
-
-def _clean_text(text: str) -> str:
-	cleaned = text.lower()
-	cleaned = re.sub(r"[^a-z\s]", " ", cleaned)
-	return re.sub(r"\s+", " ", cleaned).strip()
-
-
-def _heuristic_probability(text: str) -> int:
-	words = re.findall(r"\w+", text.lower())
-	if not words:
-		return 50
-
-	unique_ratio = len(set(words)) / max(len(words), 1)
-	avg_word_len = sum(len(w) for w in words) / len(words)
-	punctuation_density = len(re.findall(r"[!?.:,;]", text)) / max(len(text), 1)
-
-	score = (
-		(1 - min(unique_ratio, 1.0)) * 45
-		+ max(0.0, min(avg_word_len / 10, 1.0)) * 20
-		+ max(0.0, min(punctuation_density * 12, 1.0)) * 35
-	)
-	return max(5, min(95, int(round(score))))
-
-
-def _predict_text_probability(text: str) -> int:
-	if TEXT_MODEL is None or TEXT_VECTORIZER is None:
-		return _heuristic_probability(text)
-
-	cleaned = _clean_text(text)
-	vec = TEXT_VECTORIZER.transform([cleaned])
-
-	if hasattr(TEXT_MODEL, "predict_proba"):
-		probabilities = TEXT_MODEL.predict_proba(vec)[0]
-		return int(round(float(probabilities[1]) * 100))
-
-	prediction = TEXT_MODEL.predict(vec)[0]
-	return 85 if int(prediction) == 1 else 15
+def _resolve_image_model_path() -> Path | None:
+	base = BASE_DIR / "image_detection"
+	candidates = [
+		IMAGE_MODEL_PATH,
+		base / "model_best.pth.gz",
+		base / "model_best.pth" / "model_best.pth",
+		base / "model_best.pth" / "model_best.pth.gz",
+		base / "model_final.pth",
+	]
+	for candidate in candidates:
+		if candidate.is_file():
+			return candidate
+	return None
 
 
 @app.get("/health")
 def health_check() -> dict[str, Any]:
 	return {
 		"status": "ok",
-		"text_model_loaded": TEXT_MODEL is not None,
-		"vectorizer_loaded": TEXT_VECTORIZER is not None,
-		"image_model_present": IMAGE_MODEL_PATH.exists(),
+		"text_model_loaded": TEXT_DETECTOR.model_loaded,
+		"vectorizer_loaded": TEXT_DETECTOR.vectorizer_loaded,
+		"image_model_present": _resolve_image_model_path() is not None,
 	}
 
 
 @app.post("/analyze/text", response_model=TextAnalyzeResponse)
 def analyze_text(payload: TextAnalyzeRequest) -> TextAnalyzeResponse:
-	ai_probability = _predict_text_probability(payload.text)
-	verdict_ai = ai_probability >= 50
-
-	word_count = len(re.findall(r"\w+", payload.text))
-	sentence_count = max(1, len(re.findall(r"[.!?]+", payload.text)))
-	avg_sentence_length = round(word_count / sentence_count, 1)
+	analysis = TEXT_DETECTOR.analyze(payload.text)
+	ai_probability = int(analysis["ai_probability"])
+	margin = float(analysis.get("decision_margin", abs(ai_probability - 50)))
+	threshold = 52 if margin < 8 else 50
+	verdict_ai = ai_probability >= threshold
+	confidence_score = int(analysis.get("confidence_score", max(1, min(99, int(margin * 1.8)))))
 
 	signals = [
-		TextSignal(label="Word Count", value=str(word_count)),
-		TextSignal(label="Sentence Count", value=str(sentence_count)),
-		TextSignal(label="Avg Sentence Length", value=f"{avg_sentence_length} words"),
-		TextSignal(label="Classifier Source", value="Model" if TEXT_MODEL is not None else "Heuristic"),
+		TextSignal(label="Word Count", value=str(analysis["word_count"])),
+		TextSignal(label="Sentence Count", value=str(analysis["sentence_count"])),
+		TextSignal(label="Avg Sentence Length", value=f"{analysis['avg_sentence_length']} words"),
+		TextSignal(label="Chunk Votes", value=str(analysis.get("chunk_count", 1))),
+		TextSignal(label="Chunk Stability", value=f"{analysis.get('chunk_stability', 100)}%"),
+		TextSignal(label="Confidence Score", value=f"{confidence_score}/100"),
+		TextSignal(label="Classifier Source", value=str(analysis["classifier_source"])),
 	]
 
 	return TextAnalyzeResponse(
 		verdict="Likely AI-Generated" if verdict_ai else "Likely Human",
 		verdict_class="verdict-ai" if verdict_ai else "verdict-human",
 		ai_probability=ai_probability,
-		confidence=_confidence(ai_probability),
+		confidence=_confidence(ai_probability, confidence_score),
 		signals=signals,
 	)
 
@@ -165,6 +141,7 @@ def _predict_image(upload: UploadFile) -> FileAnalyzeResponse:
 		raise HTTPException(status_code=400, detail="Only image uploads are supported for image analysis.")
 
 	from image_detection.detect import Detector  # Lazy import keeps boot light.
+	resolved_image_model = _resolve_image_model_path()
 
 	suffix = Path(upload.filename or "upload.jpg").suffix or ".jpg"
 	with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
@@ -173,7 +150,7 @@ def _predict_image(upload: UploadFile) -> FileAnalyzeResponse:
 		tmp.write(data)
 
 	try:
-		if not IMAGE_MODEL_PATH.exists():
+		if not resolved_image_model:
 			image = Image.open(tmp_path).convert("RGB")
 			stat = ImageStat.Stat(image)
 			mean = sum(stat.mean) / max(len(stat.mean), 1)
@@ -191,11 +168,11 @@ def _predict_image(upload: UploadFile) -> FileAnalyzeResponse:
 					FileSignal(label="Analysis Source", value="Heuristic Fallback"),
 					FileSignal(label="Mean Brightness", value=f"{mean:.1f}"),
 					FileSignal(label="Texture Variance", value=f"{stddev:.1f}"),
-					FileSignal(label="Model File", value="Not found"),
+					FileSignal(label="Model File", value="Not found or invalid"),
 				],
 			)
 
-		detector = Detector(model_path=str(IMAGE_MODEL_PATH))
+		detector = Detector(model_path=str(resolved_image_model))
 		result = detector.predict(str(tmp_path))
 		if not result:
 			raise HTTPException(status_code=500, detail="Detection failed for the uploaded image.")
@@ -211,6 +188,7 @@ def _predict_image(upload: UploadFile) -> FileAnalyzeResponse:
 			signals=[
 				FileSignal(label="Real Probability", value=f"{result['real_prob']:.2f}%"),
 				FileSignal(label="AI Probability", value=f"{result['ai_prob']:.2f}%"),
+				FileSignal(label="AI Class Index", value=str(result.get("ai_class_index", 1))),
 				FileSignal(label="Inference Time", value=f"{result['inference_time'] * 1000:.1f} ms"),
 				FileSignal(label="Device", value=os.environ.get("TORCH_DEVICE", "auto")),
 			],
@@ -260,20 +238,25 @@ def _predict_text_file(upload: UploadFile) -> FileAnalyzeResponse:
 	if len(text.strip()) < 20:
 		raise HTTPException(status_code=400, detail="Text file content is too short for analysis.")
 
-	ai_probability = _predict_text_probability(text)
-	verdict_ai = ai_probability >= 50
-	word_count = len(re.findall(r"\w+", text))
+	analysis = TEXT_DETECTOR.analyze(text)
+	ai_probability = int(analysis["ai_probability"])
+	margin = float(analysis.get("decision_margin", abs(ai_probability - 50)))
+	threshold = 52 if margin < 8 else 50
+	verdict_ai = ai_probability >= threshold
+	confidence_score = int(analysis.get("confidence_score", max(1, min(99, int(margin * 1.8)))))
 
 	return FileAnalyzeResponse(
 		verdict="Likely AI-Generated" if verdict_ai else "Likely Human",
 		verdict_class="verdict-ai" if verdict_ai else "verdict-human",
 		ai_probability=ai_probability,
-		confidence=_confidence(ai_probability),
+		confidence=_confidence(ai_probability, confidence_score),
 		signals=[
 			FileSignal(label="File Name", value=upload.filename or "uploaded file"),
 			FileSignal(label="Character Count", value=str(len(text))),
-			FileSignal(label="Word Count", value=str(word_count)),
-			FileSignal(label="Classifier Source", value="Model" if TEXT_MODEL is not None else "Heuristic"),
+			FileSignal(label="Word Count", value=str(analysis["word_count"])),
+			FileSignal(label="Chunk Votes", value=str(analysis.get("chunk_count", 1))),
+			FileSignal(label="Chunk Stability", value=f"{analysis.get('chunk_stability', 100)}%"),
+			FileSignal(label="Classifier Source", value=str(analysis["classifier_source"])),
 		],
 	)
 

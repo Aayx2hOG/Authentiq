@@ -6,7 +6,7 @@ This service exposes text and image authenticity APIs for the Next.js frontend.
 
 - `GET /health`
 - `POST /analyze/text`
-- `POST /analyze/file` (image only)
+- `POST /analyze/file` (images and supported text/document files)
 
 ## Run Locally
 
@@ -35,6 +35,6 @@ curl -X POST http://127.0.0.1:8000/analyze/file \
 
 ## Notes
 
-- If `model.pkl` and `vectorizer.pkl` are present in `ai-service/`, text analysis uses the trained model.
+- If `text_detection/logistic_model.pkl` and `text_detection/vectorizer.pkl` are present, text analysis uses the trained model.
 - If those files are missing, text analysis falls back to a heuristic score.
 - Image analysis requires `ai-service/image_detection/model_best.pth`.

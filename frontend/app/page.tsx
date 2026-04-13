@@ -288,32 +288,32 @@ export default function LandingPage() {
 
       {/* HERO */}
       <div className="hero">
-        <div className="hero-badge">Now supporting video files</div>
+        <div className="hero-badge">Production-ready text and image checks</div>
         <h1>Is it <em>real,</em><br />or was it made<br />by a machine?</h1>
-        <p>Authentiq analyses text and images to surface the forensic signals that reveal AI-generated content — with precision you can trust.</p>
+        <p>Authentiq analyzes text and images to surface the forensic signals that indicate machine-generated content, with explainable results your team can review.</p>
         <div className="hero-actions">
           <a href="/truthlens" className="btn-primary">Start detecting free →</a>
-          <a href="#" className="btn-secondary">See a live demo</a>
+          <a href="#features" className="btn-secondary">Explore features</a>
         </div>
       </div>
 
       {/* STATS */}
       <div className="stats-bar">
         <div className="stat-item">
-          <span className="stat-num">97.4%</span>
-          <div className="stat-label">Detection accuracy</div>
+          <span className="stat-num">Calibrated</span>
+          <div className="stat-label">Confidence scoring</div>
         </div>
         <div className="stat-item">
-          <span className="stat-num">2.1s</span>
+          <span className="stat-num">~2s</span>
           <div className="stat-label">Average analysis time</div>
         </div>
         <div className="stat-item">
-          <span className="stat-num">14 models</span>
-          <div className="stat-label">AI generators covered</div>
+          <span className="stat-num">2 modes</span>
+          <div className="stat-label">Text and file analysis</div>
         </div>
         <div className="stat-item">
-          <span className="stat-num"></span>
-          <div className="stat-label"></div>
+          <span className="stat-num">API</span>
+          <div className="stat-label">Ready for integration</div>
         </div>
       </div>
 
@@ -326,17 +326,17 @@ export default function LandingPage() {
           <div className="step">
             <div className="step-num">01</div>
             <h3>Submit your content</h3>
-            <p>Paste text, drag in an image, or upload a video file. Authentiq accepts all common formats up to 50MB.</p>
+            <p>Paste text or upload an image/document sample. Authentiq supports common working formats for fast review.</p>
           </div>
           <div className="step">
             <div className="step-num">02</div>
             <h3>Forensic analysis runs</h3>
-            <p>Our pipeline inspects perplexity patterns, GAN artifacts, texture inconsistencies, and metadata anomalies in parallel.</p>
+            <p>Our pipeline inspects writing style consistency, classifier confidence, and visual artifacts before producing a score.</p>
           </div>
           <div className="step">
             <div className="step-num">03</div>
             <h3>Read the report</h3>
-            <p>A clear verdict with a confidence score, sub-metric breakdown, and a plain-language summary you can share.</p>
+            <p>Receive a clear verdict with confidence, sub-signal breakdowns, and language suitable for policy or editorial review.</p>
           </div>
         </div>
       </section>
@@ -361,8 +361,8 @@ export default function LandingPage() {
           <div className="preview-text">
             <h3>Forensic results you can explain to anyone</h3>
             <p>Every score is broken down into plain language. Share the report, export as PDF, or embed it in your workflow via API.</p>
-            <div className="check-item"><div className="check-dot">✓</div><span>Sub-score breakdown for text, image, and video</span></div>
-            <div className="check-item"><div className="check-dot">✓</div><span>Confidence levels calibrated against 14 known AI generators</span></div>
+            <div className="check-item"><div className="check-dot">✓</div><span>Signal breakdown for both text and image checks</span></div>
+            <div className="check-item"><div className="check-dot">✓</div><span>Calibrated confidence levels with margin-aware scoring</span></div>
             <div className="check-item"><div className="check-dot">✓</div><span>One-click shareable report link</span></div>
             <div className="check-item"><div className="check-dot">✓</div><span>REST API for bulk or automated scanning</span></div>
           </div>
@@ -377,17 +377,17 @@ export default function LandingPage() {
           <div className="feature-cell">
             <div className="feature-icon">📝</div>
             <h3>Text analysis</h3>
-            <p>Detects GPT-4, Claude, Gemini, and other LLM outputs using perplexity, burstiness, and n-gram fingerprinting.</p>
+            <p>Uses statistical language patterns, chunk voting, and calibrated confidence to estimate machine-generation risk.</p>
           </div>
           <div className="feature-cell">
             <div className="feature-icon">🖼</div>
             <h3>Image detection</h3>
-            <p>Identifies DALL·E, Midjourney, and Stable Diffusion outputs by inspecting GAN artifacts and texture gradients.</p>
+            <p>Inspects learned visual artifacts and texture inconsistencies to estimate whether an image is synthetic.</p>
           </div>
           <div className="feature-cell">
-            <div className="feature-icon">🎞</div>
-            <h3>Video scanning</h3>
-            <p>Frame-by-frame deepfake analysis — flags temporal inconsistencies and synthetic face artefacts across the timeline.</p>
+            <div className="feature-icon">📄</div>
+            <h3>Document support</h3>
+            <p>Analyze .txt, .md, .pdf, and .docx uploads directly through the same review workflow used for pasted text.</p>
           </div>
           <div className="feature-cell">
             <div className="feature-icon">⚙️</div>
