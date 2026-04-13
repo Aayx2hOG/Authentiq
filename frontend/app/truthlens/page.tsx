@@ -23,19 +23,10 @@ const ALLOWED_EXT = [
     "jpeg",
     "png",
     "webp",
-    "txt",
-    "md",
-    "csv",
-    "json",
-    "log",
-    "xml",
-    "html",
-    "pdf",
-    "docx",
 ];
 
 export default function TruthLens() {
-    const [activeTab, setActiveTab] = useState<"text" | "file">("text");
+    const [activeTab, setActiveTab] = useState<"text" | "image">("text");
 
     const [textInput, setTextInput] = useState("");
     const [textLoading, setTextLoading] = useState(false);
@@ -58,16 +49,15 @@ export default function TruthLens() {
 
     const fileKind = useMemo(() => {
         if (!selectedFile) return "";
-        if (selectedFile.type.startsWith("image/")) return "Image";
-        if (["pdf", "docx"].includes(selectedExt)) return "Document";
-        return "Text";
-    }, [selectedFile, selectedExt]);
+        return "Image";
+    }, [selectedFile]);
 
     const setFile = (file: File) => {
         const ext = (file.name.split(".").pop() || "").toLowerCase();
-        if (!ALLOWED_EXT.includes(ext)) {
+        const isImage = file.type.startsWith("image/");
+        if (!ALLOWED_EXT.includes(ext) || !isImage) {
             setFileError(
-                "Unsupported file type. Allowed: .jpg, .jpeg, .png, .webp, .txt, .md, .csv, .json, .log, .xml, .html, .pdf, .docx",
+                "Unsupported file type. Allowed image formats: .jpg, .jpeg, .png, .webp",
             );
             return;
         }
@@ -218,10 +208,10 @@ export default function TruthLens() {
 
                 <header className="hero">
                     <h1 className="title">TruthLens by Authentiq</h1>
-                    <p className="subtitle">Professional authenticity checks for editorial teams, classrooms, and trust workflows. Run text or file analysis and get an explainable verdict.</p>
+                    <p className="subtitle">Professional authenticity checks for editorial teams, classrooms, and trust workflows. Run text or image analysis and get an explainable verdict.</p>
                     <nav className="tabs" aria-label="Detector tabs">
                         <button className={`tab ${activeTab === "text" ? "active" : ""}`} onClick={() => setActiveTab("text")} type="button">Text Detector</button>
-                        <button className={`tab ${activeTab === "file" ? "active" : ""}`} onClick={() => setActiveTab("file")} type="button">File Detector</button>
+                        <button className={`tab ${activeTab === "image" ? "active" : ""}`} onClick={() => setActiveTab("image")} type="button">Image Detector</button>
                     </nav>
                 </header>
 
@@ -251,7 +241,7 @@ export default function TruthLens() {
                         </section>
                     ) : (
                         <section className="panel" id="panel-file">
-                            <h2>File authenticity analysis</h2>
+                            <h2>Image authenticity analysis</h2>
 
                             <div
                                 className={`drop-zone ${dragOver ? "dragover" : ""}`}
@@ -272,10 +262,10 @@ export default function TruthLens() {
                                 }}
                                 onDrop={onDrop}
                             >
-                                <input ref={fileInputRef} id="fileInput" type="file" accept=".jpg,.jpeg,.png,.webp,.txt,.md,.csv,.json,.log,.xml,.html,.pdf,.docx" hidden onChange={onFileInputChange} />
+                                <input ref={fileInputRef} id="fileInput" type="file" accept="image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp" hidden onChange={onFileInputChange} />
                                 <div className="dz-inner">
-                                    <p className="dz-title">Drop an image, text, PDF, or DOCX file</p>
-                                    <p className="dz-sub">Drag and drop here, or <span className="browse">browse from your device</span><br />Supported formats: .jpg, .jpeg, .png, .webp, .txt, .md, .csv, .json, .log, .xml, .html, .pdf, .docx</p>
+                                    <p className="dz-title">Drop an image file</p>
+                                    <p className="dz-sub">Drag and drop here, or <span className="browse">browse from your device</span><br />Supported formats: .jpg, .jpeg, .png, .webp</p>
                                 </div>
                             </div>
 
@@ -305,10 +295,10 @@ export default function TruthLens() {
                             ) : null}
 
                             <div className="meta-row">
-                                <p className="hint">Images use a vision classifier. Documents use calibrated text analysis.</p>
+                                <p className="hint">Images are processed with the vision authenticity classifier.</p>
                             </div>
 
-                            <button className="btn big" type="button" disabled={!selectedFile || fileLoading} onClick={analyzeFile}>{fileLoading ? "Scanning..." : "Scan File"}</button>
+                            <button className="btn big" type="button" disabled={!selectedFile || fileLoading} onClick={analyzeFile}>{fileLoading ? "Scanning..." : "Scan Image"}</button>
 
                             {fileLoading ? (
                                 <div className="loader" aria-live="polite">

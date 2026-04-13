@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 const AI_SERVICE_URL = process.env.AI_SERVICE_URL ?? "http://127.0.0.1:8000";
+const ALLOWED_IMAGE_EXT = new Set(["jpg", "jpeg", "png", "webp"]);
 
 export async function POST(request: Request) {
     try {
@@ -9,6 +10,14 @@ export async function POST(request: Request) {
 
         if (!(file instanceof File)) {
             return NextResponse.json({ error: "No file uploaded." }, { status: 400 });
+        }
+
+        const ext = (file.name.split(".").pop() || "").toLowerCase();
+        if (!file.type.startsWith("image/") || !ALLOWED_IMAGE_EXT.has(ext)) {
+            return NextResponse.json(
+                { error: "Unsupported file type. Only .jpg, .jpeg, .png, and .webp are allowed." },
+                { status: 400 },
+            );
         }
 
         const outgoing = new FormData();
